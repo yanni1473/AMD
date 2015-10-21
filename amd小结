@@ -1,0 +1,51 @@
+AMD
+异步模块定义（AMD）的编程接口提供了定义模块，及异步加载该模块的依赖的机制。它非常适合于使用于浏览器环境，浏览器的同步加载模块机制会带来性能，可用性，调试和跨域访问的问题。
+本规范只定义了一个函数 "define"，它是全局变量。函数的描述为：
+define(id?, dependencies?, factory);
+id是个字符串，它指的是定义中模块的名字，这个参数是可选的。如果没有提供该参数，模块的名字应该默认为模块（不允许相对名字）
+dependencies
+是个定义中模块所依赖模块的数组。依赖模块必须根据模块的工厂方法优先级执行，并且执行的结果应该按照依赖数组中的位置顺序以参数的形式传入（定义中模块的）工厂方法中。
+依赖的模块名如果是相对的，应该解析为相对定义中模块。换句话来说，相对名解析为相对与模块的名字，并非相对于寻找该模块的名字的路径。
+本规范定义了截然不同的三种特殊的依赖关键字。如果"require","exports", 或 "module"出现在依赖列表中，参数应该按照CommonJS模块规范自由变量去解析。
+依赖参数是可选的，如果忽略此参数，它应该默认为["require", "exports", "module"]。然而，如果工厂方法的长度属性小于3，加载器会选择以函数的长度属性指定的参数个数调用工厂方法。
+Factory
+为模块初始化要执行的函数或对象。如果为函数，它应该只被执行一次。如果是对象，此对象应该为模块的输出值。
+
+define(function ( require ) {
+    var isReady = false, foobar;
+ 
+    require(['foo', 'bar'], function (foo, bar) {
+        isReady = true;
+        foobar = foo() + bar();
+    });
+ 
+    return {
+        isReady: isReady,
+        foobar: foobar
+    };
+});
+上面代码所定义的模块，内部加载了foo和bar两个模块，在没有加载完成前，isReady属性值为false，加载完成后就变成了true。因此，可以根据isReady属性的值，决定下一步的动作。
+require.js
+config方法，用来配置require.js运行参数。config方法接受一个对象作为参数。
+paths
+参数指定各个模块的位置。这个位置可以是同一个服务器上的相对位置，也可以是外部网址。可以为每个模块定义多个位置，如果第一个位置加载失败，则加载第二个位置，上面的示例就表示如果CDN加载失败，则加载服务器上的备用脚本。需要注意的是，指定本地文件路径时，可以省略文件最后的js后缀名。
+baseUrl
+参数指定本地模块位置的基准目录，即本地模块的路径是相对于哪个目录的。该属性通常由require.js加载时的data-main属性指定。
+shim
+有些库不是AMD兼容的，这时就需要指定shim属性的值。shim可以理解成“垫片”，用来帮助require.js加载非AMD规范的库。
+require.config({
+    paths: {
+        "backbone": "vendor/backbone",
+        "underscore": "vendor/underscore"
+    },
+    shim: {
+        "backbone": {
+            deps: [ "underscore" ],
+            exports: "Backbone"
+        },
+        "underscore": {
+            exports: "_"
+        }
+    }
+});
+上面代码中的backbone和underscore就是非AMD规范的库。shim指定它们的依赖关系（backbone依赖于underscore），以及输出符号（backbone为“Backbone”，underscore为“_”）。
